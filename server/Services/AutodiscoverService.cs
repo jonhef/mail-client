@@ -1,5 +1,6 @@
 using MailClient.Server.Models;
 using MailKit.Net.Imap;
+using MailKit.Net.Smtp;
 using MailKit.Security;
 
 namespace MailClient.Server.Services;
@@ -25,6 +26,11 @@ public sealed class AutodiscoverService
             new ServerEndpoint("smtp.mail.yahoo.com", 587, false, true)
         )
     };
+
+    private static SecureSocketOptions ToSocketOptions(ServerEndpoint ep)
+        => ep.UseSsl
+            ? SecureSocketOptions.SslOnConnect
+            : (ep.UseStartTls ? SecureSocketOptions.StartTlsWhenAvailable : SecureSocketOptions.None);
 
     public async Task<(ServerEndpoint imap, ServerEndpoint smtp, string providerHint)> DiscoverAsync(string email, string? providerHint, CancellationToken ct)
     {
@@ -70,6 +76,38 @@ public sealed class AutodiscoverService
         );
     }
 
+    public async Task ValidateAsync(string email, string? password, ServerEndpoint imap, ServerEndpoint smtp, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(password))
+            throw new InvalidOperationException("password required");
+
+        try
+        {
+            using var imapClient = new ImapClient();
+            imapClient.Timeout = 8000;
+            await imapClient.ConnectAsync(imap.Host, imap.Port, ToSocketOptions(imap), ct);
+            await imapClient.AuthenticateAsync(email, password, ct);
+            await imapClient.DisconnectAsync(true, ct);
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException($"IMAP validation failed: {ex.Message}");
+        }
+
+        try
+        {
+            using var smtpClient = new SmtpClient();
+            smtpClient.Timeout = 8000;
+            await smtpClient.ConnectAsync(smtp.Host, smtp.Port, ToSocketOptions(smtp), ct);
+            await smtpClient.AuthenticateAsync(email, password, ct);
+            await smtpClient.DisconnectAsync(true, ct);
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException($"SMTP validation failed: {ex.Message}");
+        }
+    }
+
     private static async Task<bool> CanConnectImapAsync(ServerEndpoint ep, CancellationToken ct)
     {
         try
@@ -77,11 +115,7 @@ public sealed class AutodiscoverService
             using var client = new ImapClient();
             client.Timeout = 8000;
 
-            var opts = ep.UseSsl
-                ? SecureSocketOptions.SslOnConnect
-                : (ep.UseStartTls ? SecureSocketOptions.StartTlsWhenAvailable : SecureSocketOptions.None);
-
-            await client.ConnectAsync(ep.Host, ep.Port, opts, ct);
+            await client.ConnectAsync(ep.Host, ep.Port, ToSocketOptions(ep), ct);
             await client.DisconnectAsync(true, ct);
             return true;
         }

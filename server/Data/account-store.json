@@ -1,1 +1,24 @@
-[]
+[
+  {
+    "Config": {
+      "Id": "2e45b25d82664c85a5d8ce0e5208b01d",
+      "Email": "dmi.nov@icloud.com",
+      "DisplayName": "dmi.nov",
+      "ProviderHint": "i",
+      "Imap": {
+        "Host": "imap.icloud.com",
+        "Port": 993,
+        "UseSsl": true,
+        "UseStartTls": false
+      },
+      "Smtp": {
+        "Host": "smtp.icloud.com",
+        "Port": 587,
+        "UseSsl": false,
+        "UseStartTls": true
+      },
+      "Pop3": null
+    },
+    "EncryptedSecretsBase64": "CfDJ8GWAe5kdQoRAr1nli1JqjEg6aMP992UEVDf5g2B/G4z\u002BTe1e74UxSpUn468VJ8v\u002Bxe7FPTwYF65zi8bojmBYgXXq6dvwcjmNsadsjA5MSRb5wB7IRJoIPL2qkztuIgEl47cJbnHVbOeRCENRza6vV6ZJaIXBRZhs3sVe3AFpz\u002Bembm2EHzHjq1Wz/JeDRc/2Sj8mpUOxap77XsBGAGtP2BI="
+  }
+]

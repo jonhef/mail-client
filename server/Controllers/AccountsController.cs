@@ -17,6 +17,33 @@ public sealed class AccountsController : ControllerBase
         _discover = discover;
     }
 
+    [HttpPost("discover")]
+    public async Task<ActionResult<DiscoverResponse>> Discover([FromBody] DiscoverRequest req, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(req.Email))
+            return BadRequest("email required");
+
+        var (imap, smtp, hint) = await _discover.DiscoverAsync(req.Email, req.ProviderHint, ct);
+        return Ok(new DiscoverResponse(imap, smtp, hint));
+    }
+
+    [HttpPost("validate")]
+    public async Task<ActionResult<ValidateSettingsResponse>> Validate([FromBody] ValidateSettingsRequest req, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(req.Email))
+            return BadRequest("email required");
+
+        try
+        {
+            await _discover.ValidateAsync(req.Email, req.Password, req.Imap, req.Smtp, ct);
+            return Ok(new ValidateSettingsResponse(true, "connection ok"));
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new ValidateSettingsResponse(false, ex.Message));
+        }
+    }
+
     [HttpGet]
     public ActionResult<AccountConfig[]> List()
         => Ok(_store.ListAccounts().ToArray());
@@ -28,7 +55,18 @@ public sealed class AccountsController : ControllerBase
             return BadRequest("email required");
 
         var id = Guid.NewGuid().ToString("n");
-        var (imap, smtp, hint) = await _discover.DiscoverAsync(req.Email, req.ProviderHint, ct);
+        ServerEndpoint imap, smtp;
+        string hint = req.ProviderHint ?? "custom";
+
+        if (req.Imap is null || req.Smtp is null)
+        {
+            (imap, smtp, hint) = await _discover.DiscoverAsync(req.Email, req.ProviderHint, ct);
+        }
+        else
+        {
+            imap = req.Imap;
+            smtp = req.Smtp;
+        }
 
         var config = new AccountConfig(
             id,
@@ -37,7 +75,7 @@ public sealed class AccountsController : ControllerBase
             hint,
             imap,
             smtp,
-            null
+            req.Pop3
         );
 
         var secrets = new AccountSecrets(req.Password, null, null);

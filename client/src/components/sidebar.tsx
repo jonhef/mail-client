@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react"
 import { useStore } from "../store"
+import { AddAccountWizard } from "./addAccountWizard"
 
 export function Sidebar() {
   const accounts = useStore((s) => s.accounts)
@@ -8,13 +9,9 @@ export function Sidebar() {
   const selectedFolderId = useStore((s) => s.selectedFolderId)
   const selectAccount = useStore((s) => s.selectAccount)
   const selectFolder = useStore((s) => s.selectFolder)
-  const addAccount = useStore((s) => s.addAccount)
   const removeAccount = useStore((s) => s.removeAccount)
   const loading = useStore((s) => s.loading)
 
-  const [email, setEmail] = useState("")
-  const [name, setName] = useState("")
-  const [pass, setPass] = useState("")
   const [open, setOpen] = useState(false)
 
   const accountFolders = useMemo(() => folders.filter((f) => f.accountId === selectedAccountId), [folders, selectedAccountId])
@@ -29,30 +26,7 @@ export function Sidebar() {
       </div>
 
       {open ? (
-        <div className="card" style={{ padding: 12, display: "grid", gap: 8 }}>
-          <input className="field" placeholder="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-          <input className="field" placeholder="display name" value={name} onChange={(e) => setName(e.target.value)} />
-          <input className="field" placeholder="password (or app password)" type="password" value={pass} onChange={(e) => setPass(e.target.value)} />
-          <div style={{ display: "flex", gap: 10 }}>
-            <button
-              className="btn primary"
-              onClick={async () => {
-                await addAccount(email.trim(), name.trim() || email.trim(), pass)
-                setEmail("")
-                setName("")
-                setPass("")
-                setOpen(false)
-              }}
-              disabled={!email || !pass || loading}
-            >
-              add
-            </button>
-            <button className="btn" onClick={() => setOpen(false)}>
-              cancel
-            </button>
-          </div>
-          <div className="muted">for gmail use app password unless oauth added</div>
-        </div>
+        <AddAccountWizard onClose={() => setOpen(false)} />
       ) : null}
 
       <div className="card" style={{ padding: 10, display: "grid", gap: 8 }}>

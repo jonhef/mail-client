@@ -4,15 +4,19 @@ const API_BASE =
     throw new Error("VITE_API_BASE must be set for production builds")
   })()) // возможно будет другой порт, смотри вывод dotnet run
 
+export type ServerEndpoint = { host: string; port: number; useSsl: boolean; useStartTls: boolean }
+
 export type AccountConfig = {
   id: string
   email: string
   displayName: string
   providerHint: string
-  imap: { host: string; port: number; useSsl: boolean; useStartTls: boolean }
-  smtp: { host: string; port: number; useSsl: boolean; useStartTls: boolean }
-  pop3?: { host: string; port: number; useSsl: boolean; useStartTls: boolean } | null
+  imap: ServerEndpoint
+  smtp: ServerEndpoint
+  pop3?: ServerEndpoint | null
 }
+export type DiscoverResponse = { imap: ServerEndpoint; smtp: ServerEndpoint; providerHint: string }
+export type ValidateResponse = { ok: boolean; message?: string }
 
 export type FolderDto = { id: string; name: string; unread: number; role: string }
 export type MessageHeaderDto = {
@@ -60,8 +64,19 @@ async function http<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const api = {
   listAccounts: () => http<AccountConfig[]>("/accounts"),
-  createAccount: (body: { email: string; displayName: string; password?: string; providerHint?: string }) =>
-    http<{ config: AccountConfig }>("/accounts", { method: "POST", body: JSON.stringify(body) }),
+  discoverAccount: (body: { email: string; providerHint?: string }) =>
+    http<DiscoverResponse>("/accounts/discover", { method: "POST", body: JSON.stringify(body) }),
+  validateSettings: (body: { email: string; password?: string; imap: ServerEndpoint; smtp: ServerEndpoint }) =>
+    http<ValidateResponse>("/accounts/validate", { method: "POST", body: JSON.stringify(body) }),
+  createAccount: (body: {
+    email: string
+    displayName: string
+    password?: string
+    providerHint?: string
+    imap?: ServerEndpoint
+    smtp?: ServerEndpoint
+    pop3?: ServerEndpoint | null
+  }) => http<{ config: AccountConfig }>("/accounts", { method: "POST", body: JSON.stringify(body) }),
   deleteAccount: (id: string) => fetch(`${API_BASE}/accounts/${id}`, { method: "DELETE" }),
 
   listFolders: (accountId: string) => http<FolderDto[]>(`/mail/${accountId}/folders`),

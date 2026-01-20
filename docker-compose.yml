@@ -6,11 +6,13 @@ services:
     working_dir: /workspace/server
     volumes:
       - ./server:/workspace/server
+      - ~/.nuget/packages:/root/.nuget/packages
     command: ["dotnet", "watch", "run", "--urls", "http://0.0.0.0:5000"]
     environment:
       ASPNETCORE_URLS: http://0.0.0.0:5000
       ASPNETCORE_ENVIRONMENT: Development
       AllowedOrigins__0: http://localhost:5173
+      AllowedOrigins__1: http://127.0.0.1:5173
     ports:
       - "5000:5000"
 
@@ -22,7 +24,7 @@ services:
     command: >
       sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 5173"
     environment:
-      VITE_API_BASE: http://api:5000/api
+      VITE_API_PROXY_TARGET: http://api:5000
     ports:
       - "5173:5173"
     depends_on:

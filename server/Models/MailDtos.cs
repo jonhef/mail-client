@@ -34,11 +34,37 @@ public record MessageDto(
 
 public record ListMessagesResponse(MessageHeaderDto[] Items, string? NextCursor);
 
+public record DiscoverRequest(
+    string Email,
+    string? ProviderHint
+);
+
+public record DiscoverResponse(
+    ServerEndpoint Imap,
+    ServerEndpoint Smtp,
+    string ProviderHint
+);
+
+public record ValidateSettingsRequest(
+    string Email,
+    string? Password,
+    ServerEndpoint Imap,
+    ServerEndpoint Smtp
+);
+
+public record ValidateSettingsResponse(
+    bool Ok,
+    string? Message
+);
+
 public record CreateAccountRequest(
     string Email,
     string DisplayName,
     string? Password,
-    string? ProviderHint
+    string? ProviderHint,
+    ServerEndpoint? Imap,
+    ServerEndpoint? Smtp,
+    ServerEndpoint? Pop3
 );
 
 public record CreateAccountResponse(AccountConfig Config);

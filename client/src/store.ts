@@ -1,6 +1,6 @@
 import { create } from "zustand"
 import { db, type Account, type Folder, type MessageHeader, type MessageBody, type OutboxItem } from "./db"
-import { api } from "./api"
+import { api, type ServerEndpoint } from "./api"
 
 type Toast = { id: string; text: string }
 
@@ -22,7 +22,14 @@ type State = {
   addToast: (text: string) => void
   removeToast: (id: string) => void
 
-  addAccount: (email: string, displayName: string, password: string) => Promise<void>
+  addAccount: (input: {
+    email: string
+    displayName: string
+    password?: string
+    providerHint?: string
+    imap?: ServerEndpoint
+    smtp?: ServerEndpoint
+  }) => Promise<void>
   removeAccount: (id: string) => Promise<void>
 
   selectAccount: (id: string) => Promise<void>
@@ -93,10 +100,10 @@ export const useStore = create<State>((set, get) => ({
 
   removeToast: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
 
-  addAccount: async (email, displayName, password) => {
+  addAccount: async ({ email, displayName, password, providerHint, imap, smtp }) => {
     set({ loading: true })
     try {
-      const res = await api.createAccount({ email, displayName, password })
+      const res = await api.createAccount({ email, displayName, password, providerHint, imap, smtp })
       const a: Account = {
         id: res.config.id,
         email: res.config.email,
@@ -107,6 +114,9 @@ export const useStore = create<State>((set, get) => ({
       set((s) => ({ accounts: [...s.accounts, a] }))
       get().addToast("account added")
       await get().selectAccount(a.id)
+    } catch (e: any) {
+      get().addToast(e?.message ?? "failed to add account")
+      throw e
     } finally {
       set({ loading: false })
     }

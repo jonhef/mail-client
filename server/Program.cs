@@ -8,6 +8,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
+var allowAnyOrigin = builder.Environment.IsDevelopment();
 if (builder.Environment.IsProduction() && allowedOrigins.Length == 0)
 {
     throw new InvalidOperationException("AllowedOrigins must be configured in production.");
@@ -17,7 +18,7 @@ builder.Services.AddCors(opts =>
 {
     opts.AddPolicy("cors", p =>
     {
-        if (allowedOrigins.Length == 0)
+        if (allowAnyOrigin)
         {
             p.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
         }
@@ -52,6 +53,7 @@ if (dataProtectionLifetimeDays.HasValue && dataProtectionLifetimeDays.Value > 0)
 
 var app = builder.Build();
 
+app.UseRouting();
 app.UseCors("cors");
 app.UseSwagger();
 app.UseSwaggerUI();
