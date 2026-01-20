@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  server:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Restore
+        run: dotnet restore tests/MailClient.Server.Tests/MailClient.Server.Tests.csproj
+      - name: Build
+        run: dotnet build server/MailClient.Server.csproj --configuration Release --no-restore
+      - name: Test
+        run: dotnet test tests/MailClient.Server.Tests/MailClient.Server.Tests.csproj --configuration Release --no-restore
+
+  client:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+        working-directory: client
+      - name: Lint
+        run: npm run lint
+        working-directory: client
+      - name: Typecheck
+        run: npm run typecheck
+        working-directory: client
+      - name: Test
+        run: npm test
+        working-directory: client
+      - name: Build
+        run: npm run build
+        working-directory: client

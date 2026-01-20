@@ -325,8 +325,10 @@ export const useStore = create<State>((set, get) => ({
     // schedule bg sync
     if ("serviceWorker" in navigator && "SyncManager" in window) {
       try {
-        const reg = await navigator.serviceWorker.ready
-        await reg.sync.register("outbox-sync")
+        const reg = (await navigator.serviceWorker.ready) as ServiceWorkerRegistration & {
+          sync?: { register: (tag: string) => Promise<void> }
+        }
+        await reg.sync?.register("outbox-sync")
       } catch {
         // ignore
       }

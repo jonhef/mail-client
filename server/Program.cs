@@ -1,4 +1,5 @@
 using MailClient.Server.Services;
+using Microsoft.AspNetCore.DataProtection;
 
 var builder = WebApplication.CreateBuilder(args);
 

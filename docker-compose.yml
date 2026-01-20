@@ -1,0 +1,28 @@
+version: "3.9"
+
+services:
+  api:
+    image: mcr.microsoft.com/dotnet/sdk:8.0
+    working_dir: /workspace/server
+    volumes:
+      - ./server:/workspace/server
+    command: ["dotnet", "watch", "run", "--urls", "http://0.0.0.0:5000"]
+    environment:
+      ASPNETCORE_URLS: http://0.0.0.0:5000
+      ASPNETCORE_ENVIRONMENT: Development
+    ports:
+      - "5050:5000"
+
+  web:
+    image: node:20
+    working_dir: /workspace/client
+    volumes:
+      - ./client:/workspace/client
+    command: >
+      sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 5173"
+    environment:
+      VITE_API_BASE: http://localhost:5050/api
+    ports:
+      - "5173:5173"
+    depends_on:
+      - api

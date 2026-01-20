@@ -136,9 +136,9 @@ public sealed class MailService
             var env = s.Envelope;
             var from = env?.From?.Mailboxes?.FirstOrDefault();
             var subject = env?.Subject ?? "";
-            var date = (s.InternalDate?.DateTimeOffset ?? DateTimeOffset.UtcNow).ToString("o");
+            var date = (s.InternalDate ?? DateTimeOffset.UtcNow).ToString("o");
             var unread = !(s.Flags?.HasFlag(MessageFlags.Seen) ?? false);
-            var hasAtt = s.Body?.Attachments?.Any() ?? false;
+            var hasAtt = s.BodyParts?.Any(p => p.IsAttachment) ?? false;
 
             // стабильный id: folder + uid
             var id = $"{folderId}::uid::{s.UniqueId.Id}";

@@ -1,4 +1,4 @@
-const API_BASE = "http://localhost:5000/api" // возможно будет другой порт, смотри вывод dotnet run
+const API_BASE = (import.meta.env.VITE_API_BASE as string | undefined) ?? "http://localhost:5000/api" // возможно будет другой порт, смотри вывод dotnet run
 
 export type AccountConfig = {
   id: string
