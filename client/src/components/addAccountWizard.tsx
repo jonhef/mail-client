@@ -67,6 +67,8 @@ export function AddAccountWizard({ onClose }: { onClose: () => void }) {
   const [oauthLinked, setOauthLinked] = useState(false)
   const [oauthError, setOauthError] = useState<string | null>(null)
   const [oauthLoading, setOauthLoading] = useState(false)
+  const [isIcloud, setIsIcloud] = useState(false)
+  const [showHelp, setShowHelp] = useState(true)
 
   const [imap, setImap] = useState<ServerEndpoint>(defaultImap)
   const [smtp, setSmtp] = useState<ServerEndpoint>(defaultSmtp)
@@ -89,6 +91,11 @@ export function AddAccountWizard({ onClose }: { onClose: () => void }) {
       if (domain) setProviderHint(domain)
     }
   }, [email, providerHint])
+
+  useEffect(() => {
+    const domain = email.split("@")[1]?.toLowerCase() ?? ""
+    setIsIcloud(["icloud.com", "me.com", "mac.com"].some((d) => domain === d))
+  }, [email])
 
   useEffect(() => {
     const handler = (ev: MessageEvent) => {
@@ -277,6 +284,33 @@ export function AddAccountWizard({ onClose }: { onClose: () => void }) {
               {oauthLinked ? <div style={{ color: "#0f5132" }}>Linked! You can continue.</div> : null}
             </div>
           )}
+          <div className="card" style={{ padding: 10, background: "rgba(0,0,0,0.02)", display: showHelp ? "grid" : "none", gap: 6 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ fontWeight: 650 }}>What to enter here</div>
+              <button className="btn" onClick={() => setShowHelp(false)} style={{ padding: "6px 8px" }}>
+                hide
+              </button>
+            </div>
+            {authMethod === "password" ? (
+              <>
+                {isIcloud ? (
+                  <>
+                    <div>For iCloud/Me/Mac addresses Apple requires an <strong>app-specific password</strong>.</div>
+                    <ol style={{ margin: 0, paddingLeft: 18, color: "var(--muted)", display: "grid", gap: 4 }}>
+                      <li>Open <a href="https://appleid.apple.com/account/manage" target="_blank" rel="noreferrer">appleid.apple.com</a></li>
+                      <li>Sign in → Security → App-Specific Passwords → Generate</li>
+                      <li>Paste the generated password in the field above</li>
+                    </ol>
+                    <div className="muted">Your Apple ID password will not work here.</div>
+                  </>
+                ) : (
+                  <div className="muted">Enter your mailbox password or app password if your provider enforces 2FA (e.g., Gmail/Outlook/Yahoo app passwords).</div>
+                )}
+              </>
+            ) : (
+              <div className="muted">You will be redirected to Google, no password is stored. Use this if your Gmail account has 2FA.</div>
+            )}
+          </div>
           <div style={{ display: "flex", gap: 10 }}>
             <button className="btn" onClick={() => setStep(1)}>back</button>
             <button className="btn" onClick={() => { setStep(3); setDiscoverError(null); }}>skip autodiscover</button>

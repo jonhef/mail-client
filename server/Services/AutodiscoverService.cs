@@ -24,6 +24,18 @@ public sealed class AutodiscoverService
         ["yahoo.com"] = (
             new ServerEndpoint("imap.mail.yahoo.com", 993, true, false),
             new ServerEndpoint("smtp.mail.yahoo.com", 587, false, true)
+        ),
+        ["icloud.com"] = (
+            new ServerEndpoint("imap.mail.me.com", 993, true, false),
+            new ServerEndpoint("smtp.mail.me.com", 587, false, true)
+        ),
+        ["me.com"] = (
+            new ServerEndpoint("imap.mail.me.com", 993, true, false),
+            new ServerEndpoint("smtp.mail.me.com", 587, false, true)
+        ),
+        ["mac.com"] = (
+            new ServerEndpoint("imap.mail.me.com", 993, true, false),
+            new ServerEndpoint("smtp.mail.me.com", 587, false, true)
         )
     };
 
@@ -36,7 +48,7 @@ public sealed class AutodiscoverService
     {
         var domain = email.Split('@').LastOrDefault() ?? "";
         if (Presets.TryGetValue(domain, out var preset))
-            return (preset.imap, preset.smtp, providerHint ?? domain);
+            return (preset.imap, preset.smtp, providerHint ?? (domain.Contains("icloud", StringComparison.OrdinalIgnoreCase) ? "icloud" : domain));
 
         // эвристика: пробуем типичные хосты, валидируем через TLS IMAP connect
         var candidates = new List<ServerEndpoint>
