@@ -13,10 +13,12 @@ namespace MailClient.Server.Services;
 public sealed class MailService
 {
     private readonly AccountStore _accounts;
+    private readonly GoogleOAuthService _googleOAuth;
 
-    public MailService(AccountStore accounts)
+    public MailService(AccountStore accounts, GoogleOAuthService googleOAuth)
     {
         _accounts = accounts;
+        _googleOAuth = googleOAuth;
     }
 
     private static SecureSocketOptions ToSocketOptions(ServerEndpoint ep)
@@ -31,9 +33,33 @@ public sealed class MailService
         return (stored.Config, secrets);
     }
 
+    private async Task<string?> EnsureAccessTokenAsync(AccountConfig cfg, AccountSecrets secrets, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(secrets.OAuthAccessToken))
+            return null;
+
+        if (secrets.OAuthAccessTokenExpiresAt.HasValue && secrets.OAuthAccessTokenExpiresAt.Value <= DateTimeOffset.UtcNow.AddMinutes(-2))
+        {
+            if (!string.IsNullOrWhiteSpace(secrets.OAuthRefreshToken))
+            {
+                secrets = await _googleOAuth.RefreshAsync(cfg, secrets, ct);
+            }
+        }
+
+        return secrets.OAuthAccessToken;
+    }
+
     private async Task AuthenticateAsync(ImapClient client, AccountConfig cfg, AccountSecrets secrets, CancellationToken ct)
     {
         // oauth пока не делаем по-настоящему, просто пароль
+        var accessToken = await EnsureAccessTokenAsync(cfg, secrets, ct);
+        if (!string.IsNullOrWhiteSpace(accessToken))
+        {
+            var oauth2 = new SaslMechanismOAuth2(cfg.Email, accessToken);
+            await client.AuthenticateAsync(oauth2, ct);
+            return;
+        }
+
         if (!string.IsNullOrWhiteSpace(secrets.Password))
         {
             await client.AuthenticateAsync(cfg.Email, secrets.Password, ct);
@@ -45,6 +71,14 @@ public sealed class MailService
 
     private async Task AuthenticateSmtpAsync(SmtpClient client, AccountConfig cfg, AccountSecrets secrets, CancellationToken ct)
     {
+        var accessToken = await EnsureAccessTokenAsync(cfg, secrets, ct);
+        if (!string.IsNullOrWhiteSpace(accessToken))
+        {
+            var oauth2 = new SaslMechanismOAuth2(cfg.Email, accessToken);
+            await client.AuthenticateAsync(oauth2, ct);
+            return;
+        }
+
         if (!string.IsNullOrWhiteSpace(secrets.Password))
         {
             await client.AuthenticateAsync(cfg.Email, secrets.Password, ct);

@@ -5,7 +5,8 @@ public record ServerEndpoint(string Host, int Port, bool UseSsl, bool UseStartTl
 public record AccountSecrets(
     string? Password,      // для OAuth тут будет access/refresh, пока не реализуем полностью
     string? OAuthAccessToken,
-    string? OAuthRefreshToken
+    string? OAuthRefreshToken,
+    DateTimeOffset? OAuthAccessTokenExpiresAt = null
 );
 
 public record AccountConfig(

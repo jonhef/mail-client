@@ -64,6 +64,9 @@ export function AddAccountWizard({ onClose }: { onClose: () => void }) {
   const [providerHint, setProviderHint] = useState("")
   const [authMethod, setAuthMethod] = useState<"password" | "oauth">("password")
   const [password, setPassword] = useState("")
+  const [oauthLinked, setOauthLinked] = useState(false)
+  const [oauthError, setOauthError] = useState<string | null>(null)
+  const [oauthLoading, setOauthLoading] = useState(false)
 
   const [imap, setImap] = useState<ServerEndpoint>(defaultImap)
   const [smtp, setSmtp] = useState<ServerEndpoint>(defaultSmtp)
@@ -87,9 +90,28 @@ export function AddAccountWizard({ onClose }: { onClose: () => void }) {
     }
   }, [email, providerHint])
 
+  useEffect(() => {
+    const handler = (ev: MessageEvent) => {
+      const data = ev.data as any
+      if (data?.type === "OAUTH_DONE") {
+        if (data.success) {
+          setOauthLinked(true)
+          useStore.getState().init().catch(() => {
+            // ignore
+          })
+        } else {
+          setOauthError(data.message ?? "OAuth failed")
+        }
+      }
+    }
+    window.addEventListener("message", handler)
+    return () => window.removeEventListener("message", handler)
+  }, [])
+
   const canProceedStep1 = email.trim().length > 3 && email.includes("@")
-  const canProceedStep2 = authMethod === "password" ? password.trim().length > 0 : false
-  const canSave = imap.host && smtp.host && imap.port > 0 && smtp.port > 0 && password && email && displayName
+  const canProceedStep2 = authMethod === "password" ? password.trim().length > 0 : oauthLinked
+  const canSave =
+    imap.host && smtp.host && imap.port > 0 && smtp.port > 0 && (authMethod === "password" ? password : oauthLinked) && email && displayName
 
   async function handleDiscover() {
     setDiscovering(true)
@@ -134,7 +156,7 @@ export function AddAccountWizard({ onClose }: { onClose: () => void }) {
       await addAccount({
         email: email.trim(),
         displayName: displayName.trim() || email.trim(),
-        password: password.trim(),
+        password: authMethod === "password" ? password.trim() : undefined,
         providerHint: providerHint || "custom",
         imap,
         smtp
@@ -211,13 +233,13 @@ export function AddAccountWizard({ onClose }: { onClose: () => void }) {
             <label
               htmlFor="auth-oauth"
               aria-label="OAuth planned"
-              style={{ display: "flex", gap: 10, alignItems: "center", opacity: 0.5 }}
+              style={{ display: "flex", gap: 10, alignItems: "center" }}
               className="card field"
             >
-              <input id="auth-oauth" type="radio" disabled checked={authMethod === "oauth"} onChange={() => setAuthMethod("oauth")} />
+              <input id="auth-oauth" type="radio" checked={authMethod === "oauth"} onChange={() => setAuthMethod("oauth")} />
               <div>
-                <div style={{ fontWeight: 650 }}>OAuth (planned)</div>
-                <div className="muted">Not available yet.</div>
+                <div style={{ fontWeight: 650 }}>OAuth (Gmail)</div>
+                <div className="muted">Opens Google in a popup. Least-privilege scopes.</div>
               </div>
             </label>
           </div>
@@ -229,7 +251,32 @@ export function AddAccountWizard({ onClose }: { onClose: () => void }) {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
-          ) : null}
+          ) : (
+            <div style={{ display: "grid", gap: 8 }}>
+              <div className="muted">Gmail OAuth avoids app passwords. Popup may be blocked; allow popups for this site.</div>
+              <button
+                className="btn primary"
+                disabled={oauthLoading || !email}
+                onClick={async () => {
+                  setOauthError(null)
+                  setOauthLoading(true)
+                  try {
+                    const res = await api.startGoogleOAuth({ email: email.trim(), displayName: displayName.trim() || email.trim() })
+                    const win = window.open(res.authUrl, "oauth", "width=520,height=720")
+                    if (!win) setOauthError("popup blocked, allow popups")
+                  } catch (e: any) {
+                    setOauthError(e?.message ?? "oauth start failed")
+                  } finally {
+                    setOauthLoading(false)
+                  }
+                }}
+              >
+                {oauthLoading ? "opening..." : "Sign in with Google"}
+              </button>
+              {oauthError ? <div style={{ color: "#b42318" }}>{oauthError}</div> : null}
+              {oauthLinked ? <div style={{ color: "#0f5132" }}>Linked! You can continue.</div> : null}
+            </div>
+          )}
           <div style={{ display: "flex", gap: 10 }}>
             <button className="btn" onClick={() => setStep(1)}>back</button>
             <button className="btn" onClick={() => { setStep(3); setDiscoverError(null); }}>skip autodiscover</button>
@@ -285,9 +332,15 @@ export function AddAccountWizard({ onClose }: { onClose: () => void }) {
             <button className="btn" onClick={handleValidate} disabled={validating || !canSave}>
               {validating ? "validating..." : "validate settings"}
             </button>
-            <button className="btn primary" onClick={() => void handleSave()} disabled={!canSave || loading}>
-              {loading ? "saving..." : "save account"}
-            </button>
+            {authMethod === "password" ? (
+              <button className="btn primary" onClick={() => void handleSave()} disabled={!canSave || loading}>
+                {loading ? "saving..." : "save account"}
+              </button>
+            ) : (
+              <button className="btn primary" onClick={onClose} disabled={!oauthLinked}>
+                close
+              </button>
+            )}
           </div>
         </div>
       ) : null}

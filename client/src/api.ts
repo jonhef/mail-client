@@ -17,6 +17,7 @@ export type AccountConfig = {
 }
 export type DiscoverResponse = { imap: ServerEndpoint; smtp: ServerEndpoint; providerHint: string }
 export type ValidateResponse = { ok: boolean; message?: string }
+export type GoogleOAuthStart = { authUrl: string }
 
 export type FolderDto = { id: string; name: string; unread: number; role: string }
 export type MessageHeaderDto = {
@@ -68,6 +69,8 @@ export const api = {
     http<DiscoverResponse>("/accounts/discover", { method: "POST", body: JSON.stringify(body) }),
   validateSettings: (body: { email: string; password?: string; imap: ServerEndpoint; smtp: ServerEndpoint }) =>
     http<ValidateResponse>("/accounts/validate", { method: "POST", body: JSON.stringify(body) }),
+  startGoogleOAuth: (body: { email: string; displayName?: string }) =>
+    http<GoogleOAuthStart>("/oauth/google/start", { method: "POST", body: JSON.stringify(body) }),
   createAccount: (body: {
     email: string
     displayName: string

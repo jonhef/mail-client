@@ -34,6 +34,9 @@ builder.Services.AddCors(opts =>
 builder.Services.AddSingleton<CryptoService>();
 builder.Services.AddSingleton<AccountStore>();
 builder.Services.AddSingleton<AutodiscoverService>();
+builder.Services.AddMemoryCache();
+builder.Services.AddHttpClient();
+builder.Services.AddSingleton<GoogleOAuthService>();
 builder.Services.AddSingleton<MailService>();
 
 var dataProtectionPath = builder.Configuration.GetValue<string>("DataProtectionKeysPath")

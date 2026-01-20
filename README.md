@@ -27,6 +27,7 @@ Client app (Vite + React) lives in `client/`. ASP.NET Core backend lives in `ser
 - API base URL for the web app: `VITE_API_BASE` (required for production builds; dev uses `/api` + Vite proxy)
 - ASP.NET environment: `ASPNETCORE_ENVIRONMENT` (defaults to `Development`)
 - Optional secret hardening: `Secrets__MasterPassword` (see below)
+- Gmail OAuth: set `GoogleOAuth:ClientId`, `GoogleOAuth:ClientSecret`, and `GoogleOAuth:RedirectUri` (e.g. `http://localhost:5000/api/oauth/google/callback`)
 
 ## Docker Compose (optional)
 `docker-compose up` will start the API on port 5000 and the Vite dev server on port 5173 using SDK images. Containers install dependencies on first run and live-reload when files change. Compose passes `AllowedOrigins` for dev and points the web app at `http://api:5000/api`.
