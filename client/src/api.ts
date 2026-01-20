@@ -1,4 +1,8 @@
-const API_BASE = (import.meta.env.VITE_API_BASE as string | undefined) ?? "http://localhost:5000/api" // возможно будет другой порт, смотри вывод dotnet run
+const fromEnv = import.meta.env.VITE_API_BASE as string | undefined
+const API_BASE =
+  fromEnv ?? (import.meta.env.DEV ? "/api" : (() => {
+    throw new Error("VITE_API_BASE must be set for production builds")
+  })()) // возможно будет другой порт, смотри вывод dotnet run
 
 export type AccountConfig = {
   id: string

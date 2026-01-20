@@ -8,13 +8,25 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
+if (builder.Environment.IsProduction() && allowedOrigins.Length == 0)
+{
+    throw new InvalidOperationException("AllowedOrigins must be configured in production.");
+}
+
 builder.Services.AddCors(opts =>
 {
     opts.AddPolicy("cors", p =>
     {
-        p.WithOrigins(allowedOrigins)
-         .AllowAnyHeader()
-         .AllowAnyMethod();
+        if (allowedOrigins.Length == 0)
+        {
+            p.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
+        }
+        else
+        {
+            p.WithOrigins(allowedOrigins)
+             .AllowAnyHeader()
+             .AllowAnyMethod();
+        }
     });
 });
 
@@ -23,11 +35,20 @@ builder.Services.AddSingleton<AccountStore>();
 builder.Services.AddSingleton<AutodiscoverService>();
 builder.Services.AddSingleton<MailService>();
 
-builder.Services.AddDataProtection()
-    .PersistKeysToFileSystem(new DirectoryInfo(
-        Path.Combine(builder.Environment.ContentRootPath,
-            builder.Configuration.GetValue<string>("DataProtectionKeysPath") ?? "Data/keys")))
+var dataProtectionPath = builder.Configuration.GetValue<string>("DataProtectionKeysPath")
+                       ?? builder.Configuration.GetValue<string>("DataProtection:KeysPath")
+                       ?? "Data/keys";
+var fullKeysPath = Path.Combine(builder.Environment.ContentRootPath, dataProtectionPath);
+Directory.CreateDirectory(fullKeysPath);
+var dataProtectionLifetimeDays = builder.Configuration.GetValue<int?>("DataProtection:KeyLifetimeDays");
+var dataProtection = builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(fullKeysPath))
     .SetApplicationName("MailClient");
+
+if (dataProtectionLifetimeDays.HasValue && dataProtectionLifetimeDays.Value > 0)
+{
+    dataProtection.SetDefaultKeyLifetime(TimeSpan.FromDays(dataProtectionLifetimeDays.Value));
+}
 
 var app = builder.Build();
 
